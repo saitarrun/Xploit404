@@ -1,4 +1,4 @@
-# Striker
+# Xploit404
 
 A terminal-based penetration testing toolkit. `menu.py` is a single interactive
 launcher that wraps 52 recon, OSINT, exploitation, and red-team tools -
