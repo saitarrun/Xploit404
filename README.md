@@ -22,6 +22,32 @@ the way a hardcoded list in this file would.
 > have signed off on). `--intensive` mode requires an explicit opt-in (see
 > Configuration below) for exactly this reason.
 
+## About
+
+**Built with:** Python 3.10+ (menu, glue code, and most bundled tools), Go
+1.16+ (recon binaries below), and Bash (`setup.sh`, install scripts). See
+`requirements.txt` for the full Python dependency list.
+
+**Technologies and notable tools wrapped or bundled:**
+
+- **Recon & OSINT** - `amass`, `subfinder`, `assetfinder`, `httpx`,
+  `puredns`/`massdns`, `theHarvester`, Sublist3r, crt.sh, SecurityTrails,
+  Wayback Machine, GitHub Dorks, holehe, Sherlock, Osintgram, PhoneInfoga
+- **Vulnerability scanning** - `nuclei`, `nikto`, `sqlmap`, WAF/tech
+  fingerprinting (Wappalyzer-style), RetireJS, NVD CVE lookups
+- **Web application testing** - `gobuster`, content discovery, header
+  analysis, subdomain takeover checks
+- **Credential testing** - `hydra`, `john` (John the Ripper), `hashcat`,
+  `aircrack-ng`
+- **Active Directory / Windows** - Impacket, BloodHound, Certipy (ADCS),
+  `pypykatz`
+- **C2 & red-team frameworks** - Sliver, Havoc, Mythic, MITRE CALDERA,
+  Atomic Red Team, Metasploit, SearchSploit
+- **Phishing & delivery** - Gophish
+- **Network tooling** - `nmap`, Wireshark, `chisel`, `proxychains-ng`, Tor
+- **Dark web** - OnionSearch and related `.onion` search tooling
+- **Cryptography** - Fernet/AES password-based key derivation utilities
+
 ## Requirements
 
 - Python 3.10+ (theHarvester specifically needs 3.12+; it's vendored with its
