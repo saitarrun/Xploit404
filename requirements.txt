@@ -1,0 +1,118 @@
+# ============================================================
+#  Recon Toolkit - combined Python dependencies for every tool
+#  in the menu launcher (menu.py).
+#
+#  Install everything with:   pip install -r requirements.txt
+#
+#  Notes:
+#   * PhoneInfoga (menu option 2) needs NO Python packages - it
+#     ships as prebuilt Go binaries under bin/.
+#   * dnspython (used by Sublist3r) is vendored under thirdparty/dns/,
+#     so it is not required here; it is listed, commented out, only
+#     as an optional system-wide fallback.
+# ============================================================
+
+# --- Shared / domain scanner + Sublist3r ---
+requests
+
+# Sublist3r (3): dnspython is bundled in thirdparty/dns/. Uncomment to
+# install it system-wide instead of using the vendored copy.
+# dnspython>=2.0.0
+
+# --- Osintgram (4): Instagram OSINT ---
+requests-toolbelt>=1.0.0
+geopy>=2.0.0
+prettytable==0.7.2
+instagram-private-api==1.6.0
+hikerapi==1.7.1
+gnureadline>=8.0.0; platform_system != "Windows"
+pyreadline==2.1; platform_system == "Windows"
+
+# --- Sherlock (5): hunt usernames across social networks ---
+colorama>=0.4.1
+PySocks>=1.7.0
+requests-futures>=1.0.0
+stem>=1.8.0
+pandas>=2.2.1
+openpyxl>=3.0.10
+certifi>=2019.6.16
+tomli>=2.0.0; python_version < "3.11"
+
+# --- GoogleDorks: dork query builder uses only the standard library. The
+#     built-in crt.sh / WHOIS / Wayback / IP-geo lookups need only `requests`
+#     (already listed at the top). ---
+
+# --- holehe: email OSINT (which sites an email is registered on) ---
+holehe
+
+# --- user-scanner: 2-in-1 email + username OSINT across 350+ platforms ---
+user-scanner
+
+# --- theHarvester (emails/hosts/names) is NOT installed here: it needs
+#     Python >= 3.12 and is vendored on demand into thirdparty/theHarvester
+#     with its own venv the first time you select it in the menu. ---
+
+# --- OnionSearch: darkweb .onion search (requires Tor proxy) ---
+beautifulsoup4
+html5lib
+tqdm
+termcolor
+#
+# Tor itself is NOT a pip package - it is a system service. Install it with:
+#     macOS:    brew install tor
+#     Debian:   sudo apt install tor
+#     Fedora:   sudo dnf install tor
+#     Arch:     sudo pacman -S tor
+#     Windows:  choco install tor   (or use the Tor Browser bundle)
+# The launcher auto-starts the `tor` binary on demand once it is installed.
+# (The pip package `torpy` was tried but is unmaintained and no longer speaks
+#  the current Tor protocol, so it is intentionally not used.)
+
+# --- Go-based OSINT tools (assetfinder, subfinder, httpx, nuclei, gau, unfurl) ---
+# These are NOT Python packages; they are Go binaries. Install with:
+#     bash scripts/install_go_tools.sh
+# OR individually:
+#     go install github.com/tomnomnom/assetfinder@latest
+#     go install github.com/projectdiscovery/subfinder/v2/cmd/subfinder@latest
+#     go install github.com/projectdiscovery/httpx/cmd/httpx@latest
+#     go install github.com/projectdiscovery/nuclei/v2/cmd/nuclei@latest
+#     go install github.com/lc/gau/v2/cmd/gau@latest
+#     go install github.com/tomnomnom/unfurl@latest
+# OR on macOS via Homebrew:
+#     brew install subfinder httpx nuclei gau
+#     brew tap tomnomnom/tap && brew install assetfinder unfurl
+# After installation, ensure ~/.local/bin or the Go binary directory is in PATH.
+
+# --- More Go binaries (Amass, PureDNS, Chisel) - also not Python packages.
+#     setup.sh installs all three (PureDNS/Amass/Chisel via `go install` on
+#     Linux, since only PureDNS has no macOS brew formula either; Amass and
+#     Chisel are plain `brew install amass`/`brew install chisel` on macOS).
+#     PureDNS additionally needs the `massdns` binary at runtime - macOS gets
+#     it from the brew formula list, Linux builds it from source (no apt
+#     package exists), both handled by setup.sh. ---
+
+# --- exiftool: metadata extraction from files/images/PDFs ---
+# This is a system package (not a Python package). Install with:
+#     macOS:    brew install exiftool
+#     Debian:   sudo apt install libimage-exiftool-perl
+#     Fedora:   sudo dnf install perl-Image-ExifTool
+#     Arch:     sudo pacman -S perl-image-exiftool
+
+# --- DNS + SMTP email validation (SMTP Enum) ---
+dnspython>=2.0.0
+
+# --- GitHub Dorks: GitHub code/secret search ---
+github3.py
+feedparser
+
+# --- Advanced Crypto: Fernet/AES encryption with password-based key derivation ---
+cryptography
+
+# --- pypykatz: pure-Python credential extraction from memory (Mimikatz-alternative) ---
+pypykatz
+
+# --- Impacket: Windows protocol exploitation (psexec, secretsdump, etc.) ---
+impacket
+
+# --- Certipy: Active Directory Certificate Services (ADCS) exploitation ---
+certipy-ad

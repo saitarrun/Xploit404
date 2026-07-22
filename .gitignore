@@ -1,0 +1,45 @@
+# Python caches and local environments
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+env/
+
+# Test and tooling caches
+.coverage
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Local API keys (secrets)
+config/keys.env
+thirdparty/Osintgram/config/credentials.ini
+
+# Local machine-specific overrides (e.g. the --intensive authorization gate)
+.env.local
+
+# Generated scan results and local Tor state
+output/
+
+# Reference clones used by the dark-web tool directory
+thirdparty/darkweb/
+bin/darkweb/
+
+# theHarvester is cloned + built into its own venv on demand
+thirdparty/theHarvester/
+
+# github-dorks is cloned on demand (its deps install into the main venv)
+thirdparty/github-dorks/
+
+# Gophish runtime state (created on first server launch)
+thirdparty/gophish/gophish.db
+thirdparty/gophish/gophish.log
+
+# setup.sh run log (regenerated every run)
+setup.log
+
+# Local platform/editor files
+.DS_Store
+.idea/
+.vscode/
