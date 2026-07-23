@@ -41,7 +41,7 @@ def run(domain, sources='all', out_dir=None, profile=profiles.STANDARD):
     command.append(domain)
     if out_dir:
         os.makedirs(out_dir, exist_ok=True)
-        out_file = os.path.join(out_dir, 'gau_%s.txt' % domain.replace('/', '_'))
+        out_file = os.path.join(out_dir, 'gau_%s.txt' % domain.replace('/', '_').replace(':', '_'))
         print('[run] %s > %s' % (' '.join(command), out_file), flush=True)
         with open(out_file, 'w') as f:
             return subprocess.call(command, stdout=f, stderr=subprocess.DEVNULL)

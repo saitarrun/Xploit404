@@ -58,6 +58,6 @@ def cli(args):
         result = configure_proxy()
     else:
         result = route_through_proxy(' '.join(args))
-    text, code = render(result, desc=DESCRIPTION)
+    text, code = render(result)
     print(text)
     return code

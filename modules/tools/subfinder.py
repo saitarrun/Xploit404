@@ -38,7 +38,7 @@ def run(domain, out_dir=None, profile=profiles.STANDARD):
     command = [bin, '-d', domain] + profiles.args_for('subfinder', profile)
     if out_dir:
         os.makedirs(out_dir, exist_ok=True)
-        out_file = os.path.join(out_dir, 'subfinder_%s.txt' % domain.replace('/', '_'))
+        out_file = os.path.join(out_dir, 'subfinder_%s.txt' % domain.replace('/', '_').replace(':', '_'))
         command.extend(['-o', out_file])
     print('[run] %s' % ' '.join(command), flush=True)
     return subprocess.call(command)

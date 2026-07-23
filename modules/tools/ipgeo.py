@@ -64,7 +64,7 @@ def run(host, out_dir=None):
 
     if out_dir:
         os.makedirs(out_dir, exist_ok=True)
-        safe = (data.get('query') or host).replace('/', '_')
+        safe = (data.get('query') or host).replace('/', '_').replace(':', '_')
         path = os.path.join(out_dir, 'ipgeo_%s.txt' % safe)
         try:
             with open(path, 'w', encoding='utf-8') as handle:

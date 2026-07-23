@@ -11,6 +11,30 @@ import subprocess
 
 from modules.tools import profiles
 
+# searchsploit does a literal substring match against Exploit-DB titles, which
+# use the affected product's name ("Apache Log4j") rather than the vulnerability's
+# popular/media nickname - so the nickname alone often finds nothing even though
+# real entries exist. Only the most well-known name/title mismatches are worth
+# hardcoding here; this is a fallback tried when the literal query comes up empty,
+# not a general synonym engine.
+_ALIASES = {
+    'log4shell': 'log4j',
+    'shellshock': 'bash',
+    'eternalblue': 'ms17-010',
+    'bluekeep': 'rdp',
+    'heartbleed': 'openssl',
+    'printnightmare': 'print spooler',
+    'proxyshell': 'exchange',
+    'dirtycow': 'linux kernel',
+    'dirty pipe': 'linux kernel',
+    'zerologon': 'netlogon',
+    'krack': 'wpa2',
+}
+
+
+def _no_results(text):
+    return 'Exploits: No Results' in text and 'Shellcodes: No Results' in text
+
 
 def searchsploit_bin():
     """Locate searchsploit binary."""
@@ -51,6 +75,18 @@ def ready():
         return False, 'installation corrupted'
 
 
+def _run(binary, query, options, profile):
+    command = [binary, query]
+    if options:
+        if isinstance(options, str):
+            command.extend(options.split())
+        else:
+            command.extend(options)
+    command.extend(profiles.args_for('searchsploit', profile))
+    print('[run] %s' % ' '.join(command), flush=True)
+    return subprocess.run(command, capture_output=True, text=True)
+
+
 def search(query, out_dir=None, options=None, profile=profiles.STANDARD):
     """Search Exploit-DB for exploits matching query.
 
@@ -64,26 +100,29 @@ def search(query, out_dir=None, options=None, profile=profiles.STANDARD):
     if not binary:
         raise RuntimeError('searchsploit is not installed')
 
-    command = [binary, query]
-    if options:
-        if isinstance(options, str):
-            command.extend(options.split())
-        else:
-            command.extend(options)
+    result = _run(binary, query, options, profile)
+    alias = _ALIASES.get(query.strip().lower())
+    if alias and _no_results(result.stdout):
+        print("[!] No results for %r - Exploit-DB titles this one %r, retrying..."
+              % (query, alias), flush=True)
+        result = _run(binary, alias, options, profile)
 
-    command.extend(profiles.args_for('searchsploit', profile))
+    print(result.stdout, end='')
+    if result.stderr:
+        print(result.stderr, end='')
 
     if out_dir:
         os.makedirs(out_dir, exist_ok=True)
         safe_query = query.replace('/', '_').replace(' ', '_').replace(':', '_')
         output_file = os.path.join(out_dir, 'searchsploit_%s.txt' % safe_query)
-        # Redirect output to file
-        with open(output_file, 'w') as f:
-            print('[run] %s > %s' % (' '.join(command), output_file), flush=True)
-            return subprocess.call(command, stdout=f, stderr=subprocess.STDOUT)
+        try:
+            with open(output_file, 'w', encoding='utf-8') as f:
+                f.write(result.stdout)
+            print('[+] Saved to %s' % output_file)
+        except OSError as exc:
+            print('[error] Could not save: %s' % exc)
 
-    print('[run] %s' % ' '.join(command), flush=True)
-    return subprocess.call(command)
+    return result.returncode
 
 
 def search_cve(cve, out_dir=None, profile=profiles.STANDARD):

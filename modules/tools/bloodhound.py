@@ -70,6 +70,6 @@ def cli(args):
         result = query_paths(args[1], args[2])
     else:
         result = list_admin_users()
-    text, code = render(result, desc=DESCRIPTION)
+    text, code = render(result)
     print(text)
     return code

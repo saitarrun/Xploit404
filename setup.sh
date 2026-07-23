@@ -159,9 +159,14 @@ install_system_packages() {
             return
         fi
 
+        # chisel is deliberately NOT in this list: `brew install chisel` gets
+        # you Foundry's Solidity REPL debugger, a same-named but unrelated
+        # tool - the network tunnel (jpillora/chisel) is a separate formula,
+        # chisel-tunnel, handled by install_chisel_macos below since it can
+        # conflict with an already-installed chisel/foundry formula.
         local formulas=(nmap nikto sqlmap hydra john-jumbo hashcat aircrack-ng \
                         wireshark gobuster exiftool tor exploitdb proxychains-ng \
-                        amass massdns go chisel)
+                        amass massdns go)
         for f in "${formulas[@]}"; do
             if brew list --formula "$f" &>/dev/null; then
                 print_info "$f already installed"
@@ -239,9 +244,12 @@ install_go_tools() {
         FAILED_STEPS+=("puredns")
     fi
 
-    # Amass and Chisel are covered by the macOS brew formula list above, but
-    # neither has a reliable stock Debian/Ubuntu apt package - both ship as
-    # plain Go binaries, so install them the same way puredns is installed.
+    # Amass is covered by the macOS brew formula list above, but has no
+    # reliable stock Debian/Ubuntu apt package, so install it the same way
+    # puredns is installed. Chisel is Linux-only here too, but for a
+    # different reason: `go install` sidesteps macOS's chisel/chisel-tunnel
+    # naming collision entirely (see install_chisel_macos), so Linux never
+    # needed the brew formula list in the first place.
     if [[ "$OS" == "Linux" ]]; then
         print_info "Installing amass (no stock apt package)..."
         if GOBIN="$go_bin" go install -v github.com/owasp-amass/amass/v4/...@master 2>&1 | tee -a "$LOG_FILE" > /dev/null; then
@@ -287,6 +295,39 @@ install_massdns_linux() {
         FAILED_STEPS+=("massdns")
     fi
     rm -rf "$build_dir"
+}
+
+# ------------------------------------------------------------------------
+# `brew install chisel` installs Foundry's Solidity REPL debugger, an
+# unrelated tool that happens to share the name - the network tunnel
+# (jpillora/chisel) is a separate formula, chisel-tunnel, which conflicts
+# with chisel/foundry because both want to install a binary literally
+# called `chisel`. Never auto-uninstall an existing chisel/foundry formula
+# here: that's the user's own toolchain (e.g. for Solidity work) and
+# removing it is not this script's call to make unattended.
+install_chisel_macos() {
+    [[ "$OS" == "Darwin" ]] || return
+    print_header "Installing Chisel (network tunnel)"
+    if command -v chisel &> /dev/null && chisel server --help 2>&1 | grep -q -- '--port'; then
+        print_info "chisel (the network tunnel) already installed and on PATH"
+        return
+    fi
+    if brew list --formula chisel-tunnel &>/dev/null; then
+        print_info "chisel-tunnel already installed, but a different \`chisel\` is " \
+                   "ahead of it on PATH - check \`which chisel\`"
+        return
+    fi
+    if brew install chisel-tunnel 2>&1 | tee -a "$LOG_FILE" | grep -q "already installed\|successfully installed\|Pouring"; then
+        print_success "chisel-tunnel installed"
+    else
+        print_warning "chisel-tunnel install failed - likely conflicts with the " \
+                      "already-installed chisel/foundry formula (both install a " \
+                      "\`chisel\` binary). Not resolving this automatically since " \
+                      "that's your existing toolchain. To get the network tunnel: " \
+                      "brew uninstall chisel && brew install chisel-tunnel (or " \
+                      "brew install --overwrite chisel-tunnel to force it)."
+        FAILED_STEPS+=("chisel-tunnel")
+    fi
 }
 
 # ------------------------------------------------------------------------
@@ -404,6 +445,7 @@ main() {
     setup_config
     install_system_packages
     install_massdns_linux
+    install_chisel_macos
     install_go_tools
     install_gophish
     install_sliver

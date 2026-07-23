@@ -578,7 +578,7 @@ def run(input_func=input, out_dir=None, domain=None):
             os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
             'output')
         os.makedirs(out_dir, exist_ok=True)
-        path = os.path.join(out_dir, 'googledorks_%s.txt' % domain.replace('/', '_'))
+        path = os.path.join(out_dir, 'googledorks_%s.txt' % domain.replace('/', '_').replace(':', '_'))
         try:
             with open(path, 'w', encoding='utf-8') as handle:
                 handle.write(output + '\n')

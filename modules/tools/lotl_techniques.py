@@ -126,6 +126,6 @@ def cli(args):
         result = signed_binary_abuse()
     else:
         result = techniques_summary()
-    text, code = render(result, desc=DESCRIPTION)
+    text, code = render(result)
     print(text)
     return code

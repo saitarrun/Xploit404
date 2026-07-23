@@ -95,6 +95,6 @@ def cli(args):
         result = {'status': 'info',
                   'note': 'Atomic Red Team - ATT&CK-mapped security tests. '
                           'Use "tests" to list categories.'}
-    text, code = render(result, desc=DESCRIPTION)
+    text, code = render(result)
     print(text)
     return code

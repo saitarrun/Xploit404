@@ -63,6 +63,6 @@ def cli(args):
         result = payload_generation(target_arch=arch)
     else:
         result = advanced_tactics()
-    text, code = render(result, desc=DESCRIPTION)
+    text, code = render(result)
     print(text)
     return code

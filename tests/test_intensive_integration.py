@@ -89,11 +89,35 @@ class ProfileActivationTests(unittest.TestCase):
     def test_intensive_wayback_raises_bounded_result_limit(self):
         menu.activate_profile('intensive', authorized=True)
         with mock.patch.object(menu, 'session_prompt', return_value='example.com'), \
+                mock.patch.object(menu, 'prompt_save', return_value=menu.OUTPUT_DIR), \
                 mock.patch('modules.tools.wayback.run') as run:
             menu.run_wayback()
         run.assert_called_once_with(
             'example.com', menu.OUTPUT_DIR,
             limit=profiles.setting('wayback_limit', 'intensive'))
+
+    def test_wayback_skips_file_when_save_declined(self):
+        menu.activate_profile('standard')
+        with mock.patch.object(menu, 'session_prompt', return_value='example.com'), \
+                mock.patch.object(menu, 'prompt_save', return_value=None), \
+                mock.patch('modules.tools.wayback.run') as run:
+            menu.run_wayback()
+        run.assert_called_once_with(
+            'example.com', None, limit=profiles.setting('wayback_limit', 'standard'))
+
+
+class PromptSaveTests(unittest.TestCase):
+    def test_blank_answer_uses_default_yes(self):
+        self.assertEqual(menu.prompt_save(lambda _: ''), menu.OUTPUT_DIR)
+
+    def test_yes_returns_output_dir(self):
+        self.assertEqual(menu.prompt_save(lambda _: 'y'), menu.OUTPUT_DIR)
+
+    def test_no_returns_none(self):
+        self.assertIsNone(menu.prompt_save(lambda _: 'n'))
+
+    def test_blank_answer_honors_explicit_default(self):
+        self.assertIsNone(menu.prompt_save(lambda _: '', default=False))
 
 
 if __name__ == '__main__':

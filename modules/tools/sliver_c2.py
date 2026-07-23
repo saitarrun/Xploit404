@@ -67,6 +67,6 @@ def cli(args):
         result = {'status': 'info', 'supported_os': ['windows', 'linux', 'macos']}
     else:
         result = capabilities()
-    text, code = render(result, desc=DESCRIPTION)
+    text, code = render(result)
     print(text)
     return code

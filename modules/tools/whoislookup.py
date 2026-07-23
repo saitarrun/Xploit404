@@ -64,7 +64,7 @@ def run(domain, out_dir=None):
     print(text)
     if out_dir:
         os.makedirs(out_dir, exist_ok=True)
-        path = os.path.join(out_dir, 'whois_%s.txt' % domain.replace('/', '_'))
+        path = os.path.join(out_dir, 'whois_%s.txt' % domain.replace('/', '_').replace(':', '_'))
         try:
             with open(path, 'w', encoding='utf-8') as handle:
                 handle.write(text + '\n')

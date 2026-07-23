@@ -82,6 +82,6 @@ def cli(args):
         result = {'status': 'info',
                   'note': 'MITRE CALDERA - Adversary emulation framework. '
                           'Use "techniques" to list ATT&CK coverage.'}
-    text, code = render(result, desc=DESCRIPTION)
+    text, code = render(result)
     print(text)
     return code

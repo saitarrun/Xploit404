@@ -72,6 +72,6 @@ def cli(args):
         result = supported_agents()
     else:
         result = agent_features()
-    text, code = render(result, desc=DESCRIPTION)
+    text, code = render(result)
     print(text)
     return code

@@ -70,15 +70,19 @@ def crack_hashes(hash_file, hash_type, wordlist=None, rules=None, out_dir=None,
 
     command = [binary, '-m', str(hash_type)]
 
+    if rules:
+        command.extend(['-r', rules])
+
+    # hashcat's positional args are `hashfile [wordlist|mask]`, in that
+    # order - hashfile must come first, or hashcat treats the wordlist as
+    # the hashfile and every line in it as a malformed hash to parse.
+    command.append(hash_file)
+
     if wordlist:
         command.append(wordlist)
     else:
         command.extend(['-a', '3'])  # Brute force mask attack
 
-    if rules:
-        command.extend(['-r', rules])
-
-    command.append(hash_file)
     command.extend(profiles.args_for('hashcat', profile))
 
     if out_dir:

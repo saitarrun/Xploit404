@@ -104,6 +104,6 @@ def cli(args):
         result = {'status': 'info',
                   'note': 'Impacket exploitation tools - psexec, wmiexec, secretsdump. '
                           'Use "utilities" to list them.'}
-    text, code = render(result, desc=DESCRIPTION)
+    text, code = render(result)
     print(text)
     return code

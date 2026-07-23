@@ -98,7 +98,11 @@ def dns_bust(domain, wordlist=None, out_dir=None, profile=profiles.STANDARD):
     if not binary:
         raise RuntimeError('gobuster is not installed')
 
-    command = [binary, 'dns', '-d', domain]
+    # `-d` used to be dns mode's domain flag; gobuster 3.x repurposed it as
+    # the global `--delay` flag and moved the domain to `--domain` (`--do`)
+    # instead, so `-d <domain>` now fails with "invalid value ... parse
+    # error" rather than scanning anything.
+    command = [binary, 'dns', '--domain', domain]
 
     if wordlist:
         command.extend(['-w', wordlist])

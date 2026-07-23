@@ -27,13 +27,30 @@ def ready():
 def resolve_dns(target):
     """Resolve DNS records for target."""
     try:
+        # `puredns resolve <file>` treats its positional argument as a file
+        # of domains to read, not a domain itself - passing the domain
+        # directly makes it look for (and silently find no) file by that
+        # name and exit 0 with empty output. Its docs cover exactly this
+        # case: "the <file> argument can be omitted if the domains to
+        # resolve are read from stdin".
         result = subprocess.run(
-            ['puredns', 'resolve', target],
+            ['puredns', 'resolve'],
+            input=target + '\n',
             capture_output=True,
             text=True,
-            timeout=60
+            timeout=90
         )
-        return {'status': 'success', 'output': result.stdout}
+        if result.returncode != 0:
+            return {'status': 'error',
+                   'message': result.stderr.strip() or
+                              'puredns exited with code %d' % result.returncode}
+        # Resolved results go to stdout, but ALL of puredns's progress and
+        # "no valid domains remaining"-type diagnostics go to stderr - stdout
+        # alone looks confusingly empty even on a real, completed run.
+        output = result.stdout.strip()
+        if not output:
+            output = result.stderr.strip()
+        return {'status': 'success', 'output': output}
     except Exception as e:
         return {'status': 'error', 'message': str(e)}
 
@@ -59,6 +76,6 @@ def cli(args):
         result = bruteforce_domains(args[0], wordlist=args[1])
     else:
         result = resolve_dns(args[0])
-    text, code = render(result, desc=DESCRIPTION)
+    text, code = render(result)
     print(text)
     return code

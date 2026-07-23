@@ -85,6 +85,6 @@ def cli(args):
         result = {'status': 'info',
                   'note': 'Certipy - ADCS exploitation tool. '
                           'Use "vulns" to list known ADCS vulnerabilities.'}
-    text, code = render(result, desc=DESCRIPTION)
+    text, code = render(result)
     print(text)
     return code

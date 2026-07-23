@@ -71,6 +71,18 @@ SESSION = {
 }
 
 
+def prompt_save(input_func=input, default=True):
+    """Ask once whether this run's results should be written to a file under
+    output/.  Every tool wrapper already treats out_dir=None as "print to the
+    terminal only, don't write a file" - this just decides which one to pass.
+    Returns OUTPUT_DIR (save) or None (don't save)."""
+    suffix = 'Y/n' if default else 'y/N'
+    raw = input_func('%s Save results to a file under output/? (%s): '
+                     % (que, suffix)).strip().lower()
+    save = default if not raw else raw in ('y', 'yes')
+    return OUTPUT_DIR if save else None
+
+
 def session_prompt(field, label, input_func=input):
     """Prompt for a value, defaulting to the current session target.  An empty
     reply keeps the default; a non-empty reply updates the session."""
@@ -206,19 +218,24 @@ def ready_domain():
     return (not missing), ('missing: %s' % ', '.join(missing) if missing else 'ready')
 
 
-def _do_sublist3r(domain):
+def _do_sublist3r(domain, out_dir=OUTPUT_DIR):
     script = os.path.join(HERE, 'thirdparty', 'sublist3r.py')
     if not os.path.isfile(script):
         print('%s Sublist3r not found in thirdparty/.' % bad)
         return 1
-    os.makedirs(OUTPUT_DIR, exist_ok=True)
-    save = os.path.join(OUTPUT_DIR, 'sublist3r_%s.txt' % domain.replace('/', '_'))
     # Sublist3r imports its bundled subbrute/dns via its own directory on
     # sys.path[0], so invoking the vendored script directly Just Works.
-    command = ([sys.executable, script, '-d', domain, '-o', save]
-               + profiles.args_for('sublist3r', SESSION['profile']))
+    # -o is optional upstream - it prints subdomains to the terminal either
+    # way, and only writes a copy to file when a path is given.
+    command = [sys.executable, script, '-d', domain]
+    save = None
+    if out_dir:
+        os.makedirs(out_dir, exist_ok=True)
+        save = os.path.join(out_dir, 'sublist3r_%s.txt' % domain.replace('/', '_'))
+        command.extend(['-o', save])
+    command.extend(profiles.args_for('sublist3r', SESSION['profile']))
     result = subprocess.run(command)
-    if result.returncode == 0 and os.path.isfile(save):
+    if result.returncode == 0 and save and os.path.isfile(save):
         print('%s Subdomains saved to %s' % (good, os.path.relpath(save, HERE)))
     return result.returncode
 
@@ -228,7 +245,7 @@ def run_sublist3r():
     if not domain:
         print('%s No domain provided.' % bad)
         return
-    _do_sublist3r(domain)
+    _do_sublist3r(domain, out_dir=prompt_save())
 
 
 def cli_sublist3r(args):
@@ -251,7 +268,7 @@ SHERLOCK_DEPS = ['requests', 'requests_futures', 'pandas', 'openpyxl',
                  'colorama', 'socks', 'stem', 'certifi']
 
 
-def _do_sherlock(usernames):
+def _do_sherlock(usernames, out_dir=OUTPUT_DIR):
     ok, detail = ready_sherlock()
     if not ok:
         print('%s Sherlock not ready: %s' % (bad, detail))
@@ -262,16 +279,19 @@ def _do_sherlock(usernames):
     os.makedirs(OUTPUT_DIR, exist_ok=True)
     env = os.environ.copy()
     env['PYTHONPATH'] = SHERLOCK_DIR + os.pathsep + env.get('PYTHONPATH', '')
-    # Run the vendored package as a module; results (per-username .txt) land in
-    # output/ because that is the working directory.
-    command = ([sys.executable, '-m', 'sherlock_project']
+    # Sherlock's own --txt flag (off by default upstream) controls whether it
+    # writes a per-username .txt file at all; it always prints hits to the
+    # terminal either way, so out_dir=None just leaves that flag off.
+    extra = ['--txt'] if out_dir else []
+    command = ([sys.executable, '-m', 'sherlock_project'] + extra
                + profiles.args_for('sherlock', SESSION['profile'])
                + list(usernames))
     result = subprocess.run(
         command,
         cwd=OUTPUT_DIR, env=env)
-    print('%s Any hits were written under %s/'
-          % (good, os.path.relpath(OUTPUT_DIR, HERE)))
+    if out_dir:
+        print('%s Any hits were written under %s/'
+              % (good, os.path.relpath(OUTPUT_DIR, HERE)))
     return result.returncode
 
 
@@ -285,7 +305,7 @@ def run_sherlock():
         print('%s No username provided.' % bad)
         return
     SESSION['username'] = targets[0]
-    _do_sherlock(targets)
+    _do_sherlock(targets, out_dir=prompt_save())
 
 
 def cli_sherlock(args):
@@ -475,7 +495,7 @@ def run_crtsh():
     if not domain:
         print('%s No domain provided.' % bad)
         return
-    crtsh.run(domain, OUTPUT_DIR)
+    crtsh.run(domain, prompt_save())
 
 
 def cli_crtsh(args):
@@ -493,7 +513,7 @@ def run_whois():
     if not domain:
         print('%s No domain provided.' % bad)
         return
-    whoislookup.run(domain, OUTPUT_DIR)
+    whoislookup.run(domain, prompt_save())
 
 
 def cli_whois(args):
@@ -512,7 +532,7 @@ def run_wayback():
         print('%s No domain provided.' % bad)
         return
     limit = profiles.setting('wayback_limit', SESSION['profile'])
-    wayback.run(domain, OUTPUT_DIR, limit=limit)
+    wayback.run(domain, prompt_save(), limit=limit)
 
 
 def cli_wayback(args):
@@ -531,7 +551,7 @@ def run_ipgeo():
     if not host:
         print('%s No IP or host provided.' % bad)
         return
-    ipgeo.run(host, OUTPUT_DIR)
+    ipgeo.run(host, prompt_save())
 
 
 def cli_ipgeo(args):
@@ -572,7 +592,7 @@ def run_nmap():
     if any(flag in args for flag in ('-A', '-O', '-sS')) and not is_root:
         print('%s That scan needs root for OS/SYN features; run the launcher '
               'with sudo, or Nmap will do what it can unprivileged.' % info)
-    nmap_scan.run(target, args, OUTPUT_DIR)
+    nmap_scan.run(target, args, prompt_save())
 
 
 def cli_nmap(args):
@@ -705,7 +725,7 @@ def _ensure_githubdorks():
     return github_dorks.ready()[0]
 
 
-def _do_githubdorks(target):
+def _do_githubdorks(target, out_dir=OUTPUT_DIR):
     from modules.tools import github_dorks
     token = _gh_token()
     if not token:
@@ -714,7 +734,7 @@ def _do_githubdorks(target):
         print('    Add GH_TOKEN to config/keys.env (or export it) for real use.')
     is_repo = '/' in target
     return github_dorks.run(target, is_repo=is_repo, token=token,
-                            out_dir=OUTPUT_DIR)
+                            out_dir=out_dir)
 
 
 def run_githubdorks():
@@ -725,7 +745,7 @@ def run_githubdorks():
     if not target:
         print('%s No target provided.' % bad)
         return
-    _do_githubdorks(target)
+    _do_githubdorks(target, out_dir=prompt_save())
 
 
 def cli_githubdorks(args):
@@ -757,7 +777,7 @@ def run_assetfinder():
     if not domain:
         print('%s No domain provided.' % bad)
         return
-    assetfinder.run(domain, OUTPUT_DIR)
+    assetfinder.run(domain, prompt_save())
 
 def cli_assetfinder(args):
     from modules.tools import assetfinder
@@ -785,7 +805,7 @@ def run_subfinder():
     if not domain:
         print('%s No domain provided.' % bad)
         return
-    subfinder.run(domain, OUTPUT_DIR, profile=SESSION['profile'])
+    subfinder.run(domain, prompt_save(), profile=SESSION['profile'])
 
 def cli_subfinder(args):
     from modules.tools import subfinder
@@ -815,7 +835,7 @@ def run_httpx():
         return
     flags = input('%s Flags (e.g. -title -status-code) [leave blank for defaults]: ' % que).strip()
     SESSION['domain'] = target
-    httpx.run(target, flags or None, OUTPUT_DIR, profile=SESSION['profile'])
+    httpx.run(target, flags or None, prompt_save(), profile=SESSION['profile'])
 
 def cli_httpx(args):
     from modules.tools import httpx
@@ -850,7 +870,7 @@ def run_nuclei():
     severity = input('%s Severity [%s]: ' % (que, default_severity)).strip()
     severity = severity or default_severity
     SESSION['domain'] = target
-    nuclei.run(target, severity, OUTPUT_DIR, profile=SESSION['profile'])
+    nuclei.run(target, severity, prompt_save(), profile=SESSION['profile'])
 
 def cli_nuclei(args):
     from modules.tools import nuclei
@@ -881,7 +901,7 @@ def run_gau():
     if not domain:
         print('%s No domain provided.' % bad)
         return
-    gau.run(domain, 'all', OUTPUT_DIR, profile=SESSION['profile'])
+    gau.run(domain, 'all', prompt_save(), profile=SESSION['profile'])
 
 def cli_gau(args):
     from modules.tools import gau
@@ -910,7 +930,7 @@ def run_unfurl():
         print('%s No URL provided.' % bad)
         return
     mode = input('%s Mode (domains/subdomains/paths/keys/values) [domains]: ' % que).strip() or 'domains'
-    unfurl.run(url, mode, OUTPUT_DIR)
+    unfurl.run(url, mode, prompt_save())
 
 def cli_unfurl(args):
     from modules.tools import unfurl
@@ -939,7 +959,7 @@ def run_exiftool():
     if not file_path:
         print('%s No file provided.' % bad)
         return
-    exiftool.run(file_path, OUTPUT_DIR)
+    exiftool.run(file_path, prompt_save())
 
 def cli_exiftool(args):
     from modules.tools import exiftool
@@ -963,7 +983,7 @@ def run_smtp_enum():
         print('%s No email/file provided.' % bad)
         return
     if email.startswith('/') or os.path.isfile(email):
-        smtp_enum.run(email, OUTPUT_DIR)
+        smtp_enum.run(email, prompt_save())
     else:
         SESSION['email'] = email
         smtp_enum.run(email, OUTPUT_DIR)
@@ -1005,7 +1025,7 @@ def run_theharvester():
     if not domain:
         print('%s No domain provided.' % bad)
         return
-    theharvester.run(domain, out_dir=OUTPUT_DIR)
+    theharvester.run(domain, out_dir=prompt_save())
 
 
 def cli_theharvester(args):
@@ -1296,7 +1316,7 @@ def run_searchsploit():
         print('%s No query provided.' % bad)
         return
     options = input('%s Additional options (e.g., -j for JSON) [blank]: ' % que).strip()
-    searchsploit.search(query, OUTPUT_DIR, options=options or None, profile=SESSION['profile'])
+    searchsploit.search(query, prompt_save(), options=options or None, profile=SESSION['profile'])
 
 
 def cli_searchsploit(args):
@@ -1332,7 +1352,7 @@ def run_hydra():
     username = input('%s Username (or leave blank for -L file): ' % que).strip()
     password = input('%s Password (or leave blank for -P file): ' % que).strip()
     hydra.attack(target, protocol, username=username or None, password=password or None,
-                 out_dir=OUTPUT_DIR, profile=SESSION['profile'])
+                 out_dir=prompt_save(), profile=SESSION['profile'])
 
 
 def cli_hydra(args):
@@ -1396,7 +1416,7 @@ def run_sqlmap():
     if not url:
         print('%s No URL provided.' % bad)
         return
-    sqlmap.scan_url(url, out_dir=OUTPUT_DIR, profile=SESSION['profile'])
+    sqlmap.scan_url(url, out_dir=prompt_save(), profile=SESSION['profile'])
 
 
 def cli_sqlmap(args):
@@ -1429,7 +1449,7 @@ def run_nikto():
     port = input('%s Port [80]: ' % que).strip() or '80'
     ssl = input('%s Use SSL/HTTPS? [y/N]: ' % que).strip().lower() == 'y'
     try:
-        nikto.scan(target, port=int(port), ssl=ssl, out_dir=OUTPUT_DIR, profile=SESSION['profile'])
+        nikto.scan(target, port=int(port), ssl=ssl, out_dir=prompt_save(), profile=SESSION['profile'])
     except ValueError:
         print('%s Invalid port number.' % bad)
 
@@ -1497,7 +1517,7 @@ def run_hashcat():
         return
     hash_type = input('%s Hash type ID (0=MD5, 1400=SHA2-256, 3200=bcrypt, etc): ' % que).strip()
     wordlist = input('%s Wordlist (optional): ' % que).strip()
-    hashcat.crack_hashes(hash_file, hash_type, wordlist=wordlist or None, out_dir=OUTPUT_DIR)
+    hashcat.crack_hashes(hash_file, hash_type, wordlist=wordlist or None, out_dir=prompt_save())
 
 
 def cli_hashcat(args):
@@ -1530,7 +1550,7 @@ def run_gobuster():
             print('%s No domain provided.' % bad)
             return
         wordlist = input('%s Wordlist: ' % que).strip()
-        gobuster.dns_bust(domain, wordlist=wordlist or None, out_dir=OUTPUT_DIR)
+        gobuster.dns_bust(domain, wordlist=wordlist or None, out_dir=prompt_save())
     else:
         url = input('%s Target URL: ' % que).strip()
         if not url:
@@ -1538,7 +1558,7 @@ def run_gobuster():
             return
         extensions = input('%s Extensions (e.g. php,html): ' % que).strip()
         wordlist = input('%s Wordlist: ' % que).strip()
-        gobuster.dir_bust(url, wordlist=wordlist or None, extensions=extensions or None, out_dir=OUTPUT_DIR)
+        gobuster.dir_bust(url, wordlist=wordlist or None, extensions=extensions or None, out_dir=prompt_save())
 
 
 def cli_gobuster(args):
@@ -1576,7 +1596,7 @@ def run_wireshark():
             return
         packet_count = input('%s Packet count [100]: ' % que).strip()
         wireshark.capture_live(interface, packet_count=int(packet_count) if packet_count else 100,
-                               out_dir=OUTPUT_DIR)
+                               out_dir=prompt_save())
     elif mode == 'read':
         pcap_file = input('%s PCAP file: ' % que).strip()
         if not pcap_file or not os.path.isfile(pcap_file):
@@ -1662,12 +1682,14 @@ def run_cipher_toolkit():
         print('%s Possible decryptions:' % good)
         for method, result in results.items():
             print(f'  [{method}]: {result[:50]}...' if len(str(result)) > 50 else f'  [{method}]: {result}')
-        os.makedirs(OUTPUT_DIR, exist_ok=True)
-        output_file = os.path.join(OUTPUT_DIR, 'cipher_decryption_results.txt')
-        with open(output_file, 'w') as f:
-            for method, result in results.items():
-                f.write(f'{method}: {result}\n')
-        print('%s Results saved to %s' % (good, os.path.relpath(output_file, HERE)))
+        save_dir = prompt_save()
+        if save_dir:
+            os.makedirs(save_dir, exist_ok=True)
+            output_file = os.path.join(save_dir, 'cipher_decryption_results.txt')
+            with open(output_file, 'w') as f:
+                for method, result in results.items():
+                    f.write(f'{method}: {result}\n')
+            print('%s Results saved to %s' % (good, os.path.relpath(output_file, HERE)))
 
     elif choice == '4':
         text = input('%s Text: ' % que).strip()
@@ -1764,8 +1786,16 @@ def cli_cipher_toolkit(args):
         return 0
 
     elif command == 'caesar' and len(args) > 1:
-        text = ' '.join(args[1:])
-        shift = int(args[-1]) if args[-1].isdigit() else 3
+        # A trailing numeric arg is the shift, not part of the text - it
+        # must be excluded from `text` or it gets decrypted as if it were
+        # part of the message (e.g. "caesar Khoor Zruog 3" would otherwise
+        # try to decrypt "Khoor Zruog 3" instead of "Khoor Zruog").
+        if args[-1].isdigit():
+            shift = int(args[-1])
+            text = ' '.join(args[1:-1])
+        else:
+            shift = 3
+            text = ' '.join(args[1:])
         results = cipher_toolkit.caesar_decrypt(text, shift)
         for shift_val, result in results.items():
             print(f'{shift_val}: {result}')
@@ -1798,8 +1828,11 @@ def run_advanced_crypto():
 
     if choice == '1':
         result = advanced_crypto.generate_fernet_key()
-        print('%s Generated Key: %s' % (good, result['key']))
-        print('%s %s' % (info, result['note']))
+        if isinstance(result, dict):
+            print('%s Generated Key: %s' % (good, result['key']))
+            print('%s %s' % (info, result['note']))
+        else:
+            print('%s Error: %s' % (bad, result))
 
     elif choice == '2':
         text = input('%s Text to encrypt: ' % que).strip()
@@ -1858,8 +1891,11 @@ def cli_advanced_crypto(args):
     command = args[0].lower()
     if command == 'generate':
         result = advanced_crypto.generate_fernet_key()
-        print(result['key'])
-        return 0
+        if isinstance(result, dict):
+            print(result['key'])
+            return 0
+        print('%s Error: %s' % (bad, result))
+        return 1
 
     print('%s Unknown command: %s' % (bad, command))
     return 2
@@ -2457,7 +2493,14 @@ def interactive_loop():
                     if not is_ready:
                         print('%s Tool not available: %s' % (bad, status))
                         continue
-                
+
+                # A one-line reminder of what this tool actually does, shown
+                # before it asks for input or runs - every TOOLS entry already
+                # carries this description for the menu listing, so this is
+                # just showing it again at the point it's actually useful.
+                if tool.get('desc'):
+                    print('%s %s' % (info, tool['desc']))
+
                 # Run tool with CLI handler if args provided, otherwise runner.
                 # Every tool prints its own output and returns an exit code (cli)
                 # or None (runner) - the dispatcher has nothing left to print.
@@ -2466,9 +2509,30 @@ def interactive_loop():
                     if cli_func:
                         cli_func(args)
                 else:
+                    # Loop the interactive runner by default so one selection
+                    # can cover several searches/scans (e.g. searchsploit,
+                    # then a follow-up query) instead of forcing a full
+                    # return-to-menu and re-select for every single use.
+                    # No y/n confirmation between runs - looping again is the
+                    # default (just press Enter); typing quit is the only way
+                    # out, same as the single-shot pause below. Only the
+                    # args-less path loops - a fixed `tool args` invocation
+                    # would just repeat identical results.
                     runner_func = tool.get('runner')
                     if runner_func:
-                        runner_func()
+                        while True:
+                            runner_func()
+                            if input('\n').strip().lower() in ('quit', 'exit', 'q'):
+                                break
+                        continue
+
+                # Hold on the finished output until the user is ready to move
+                # on, instead of immediately reprinting the menu prompt.
+                # This always returns to the menu, whatever is typed here -
+                # "quit" pops up one level (tool -> menu); the same word at
+                # the striker> prompt itself (handled above) pops up the next
+                # level (menu -> exit program).
+                input('\n')
             else:
                 print('%s Unknown command: %s' % (bad, tool_id))
                 print('%s Type "help" for available commands' % info)

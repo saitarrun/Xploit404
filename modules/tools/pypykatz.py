@@ -67,6 +67,6 @@ def cli(args):
     if not args:
         print('Usage: pypykatz <lsass_dump_file>')
         return 2
-    text, code = render(extract_lsass(args[0]), desc=DESCRIPTION)
+    text, code = render(extract_lsass(args[0]))
     print(text)
     return code

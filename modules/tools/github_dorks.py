@@ -57,7 +57,7 @@ def run(target, is_repo=False, token=None, out_dir=None):
                '-d', str(DORK_FILE)]
     if out_dir:
         os.makedirs(out_dir, exist_ok=True)
-        safe = target.replace('/', '_')
+        safe = target.replace('/', '_').replace(':', '_')
         command.extend(['-o', os.path.join(out_dir, 'github_dorks_%s.csv' % safe)])
     print('[run] %s' % ' '.join(command), flush=True)
     return subprocess.call(command, env=env)
